@@ -1,134 +1,123 @@
+EXAMPLE PROBLEM -
+1.	Display the customer name & total no. of items purchased by the customers.
+2.	Display the number of customers in the state, where the customer name contains "Mike".
+3.	Create a view to display order number, Average of price by taking into the orders that they placed in the last 15 days.
+4.	Write a PLSQL program to display the numbers from 1-5.
+________________________________________
+Step 1: Create Tables
+(Run this first to ensure the schema matches the queries)
+SQL
 -- Clean up previous tables if they exist
 DROP TABLE LINEITEMS;
 DROP TABLE ORDERS;
 DROP TABLE ITEMS;
 DROP TABLE CUSTOMERS;
 DROP VIEW RecentOrderAvg;
- 
+
 -- Create Tables
 CREATE TABLE CUSTOMERS (
-    Custno NUMBER
-PRIMARY KEY,
-    Custname
-VARCHAR2(50),
-    Address1
-VARCHAR2(100),
-    Address2
-VARCHAR2(100),
-    City VARCHAR2(50),
-    State
-VARCHAR2(50),
-    Pincode
-VARCHAR2(10),
-    Phone VARCHAR2(20)
+    Custno NUMBER PRIMARY KEY,
+    Custname VARCHAR2(50),
+    Address1 VARCHAR2(100),
+    Address2 VARCHAR2(100),
+    City VARCHAR2(50),
+    State VARCHAR2(50),
+    Pincode VARCHAR2(10),
+    Phone VARCHAR2(20)
 );
- 
+
 CREATE TABLE ITEMS (
-    Itemno NUMBER
-PRIMARY KEY,
-    Itemname
-VARCHAR2(50),
-    Rate NUMBER(10,
-2),
-    Taxrate NUMBER(5,
-2)
+    Itemno NUMBER PRIMARY KEY,
+    Itemname VARCHAR2(50),
+    Rate NUMBER(10, 2),
+    Taxrate NUMBER(5, 2)
 );
- 
+
 CREATE TABLE ORDERS (
-    Ordno NUMBER
-PRIMARY KEY,
-    OrdDate DATE,
-    ShipDate DATE,
-    Custno NUMBER,
-    Address1
-VARCHAR2(100),
-    Address2
-VARCHAR2(100),
-    City VARCHAR2(50),
-    State
-VARCHAR2(50),
-    Pincode
-VARCHAR2(10),
-    Phone
-VARCHAR2(20),
-    CONSTRAINT
-fk_cust_order FOREIGN KEY (Custno) REFERENCES CUSTOMERS(Custno)
+    Ordno NUMBER PRIMARY KEY,
+    OrdDate DATE,
+    ShipDate DATE,
+    Custno NUMBER,
+    Address1 VARCHAR2(100),
+    Address2 VARCHAR2(100),
+    City VARCHAR2(50),
+    State VARCHAR2(50),
+    Pincode VARCHAR2(10),
+    Phone VARCHAR2(20),
+    CONSTRAINT fk_cust_order FOREIGN KEY (Custno) REFERENCES CUSTOMERS(Custno)
 );
- 
+
 CREATE TABLE LINEITEMS (
-    Ordno NUMBER,
-    ItemNo NUMBER,
-    Qty NUMBER,
-    Price NUMBER(10,
-2),
-    DisRate NUMBER(5,
-2),
-    CONSTRAINT
-pk_lineitem PRIMARY KEY (Ordno, ItemNo),
-    CONSTRAINT
-fk_ord_line FOREIGN KEY (Ordno) REFERENCES ORDERS(Ordno),
-    CONSTRAINT
-fk_item_line FOREIGN KEY (ItemNo) REFERENCES ITEMS(Itemno)
+    Ordno NUMBER,
+    ItemNo NUMBER,
+    Qty NUMBER,
+    Price NUMBER(10, 2),
+    DisRate NUMBER(5, 2),
+    CONSTRAINT pk_lineitem PRIMARY KEY (Ordno, ItemNo),
+    CONSTRAINT fk_ord_line FOREIGN KEY (Ordno) REFERENCES ORDERS(Ordno),
+    CONSTRAINT fk_item_line FOREIGN KEY (ItemNo) REFERENCES ITEMS(Itemno)
 );
- 
+Step 2: Insert Data
+(I have customized this data to ensure the specific queries like "last 15 days" and name "Mike" work correctly).
+SQL
 -- 1. Insert Customers (Including one 'Mike' for Q2)
-INSERT INTO CUSTOMERS VALUES (1, 'Ravi Kumar', '123 Main
-St', 'Apt 4B', 'Bangalore', 'Karnataka', '560001', '9876543210');
-INSERT INTO CUSTOMERS VALUES (2, 'Mike Ross', '456 Law Ave',
-'Suite 500', 'New York', 'New York', '10001', '9123456789');
-INSERT INTO CUSTOMERS VALUES (3, 'Mike Tyson', '789 Ring
-Rd', 'Gym B', 'Las Vegas', 'Nevada', '89109', '8899776655');
- 
+INSERT INTO CUSTOMERS VALUES (1, 'Ravi Kumar', '123 Main St', 'Apt 4B', 'Bangalore', 'Karnataka', '560001', '9876543210');
+INSERT INTO CUSTOMERS VALUES (2, 'Mike Ross', '456 Law Ave', 'Suite 500', 'New York', 'New York', '10001', '9123456789');
+INSERT INTO CUSTOMERS VALUES (3, 'Mike Tyson', '789 Ring Rd', 'Gym B', 'Las Vegas', 'Nevada', '89109', '8899776655');
+
 -- 2. Insert Items
 INSERT INTO ITEMS VALUES (101, 'Laptop', 50000.00, 18.00);
 INSERT INTO ITEMS VALUES (102, 'Mouse', 500.00, 12.00);
- 
+
 -- 3. Insert Orders 
--- IMPORTANT: Using SYSDATE to ensure Q3 works regardless of
-when you run this
-INSERT INTO ORDERS VALUES (1001, SYSDATE - 20, SYSDATE - 18,
-1, 'Addr1', 'Addr2', 'Bangalore', 'Karnataka', '560001', '9999999999'); --
-Older order (>15 days)
-INSERT INTO ORDERS VALUES (1002, SYSDATE - 5, SYSDATE - 3,
-2, 'Addr1', 'Addr2', 'New York', 'New York', '10001', '8888888888');   -- Recent order (<15 days)
- 
+-- IMPORTANT: Using SYSDATE to ensure Q3 works regardless of when you run this
+INSERT INTO ORDERS VALUES (1001, SYSDATE - 20, SYSDATE - 18, 1, 'Addr1', 'Addr2', 'Bangalore', 'Karnataka', '560001', '9999999999'); -- Older order (>15 days)
+INSERT INTO ORDERS VALUES (1002, SYSDATE - 5, SYSDATE - 3, 2, 'Addr1', 'Addr2', 'New York', 'New York', '10001', '8888888888');   -- Recent order (<15 days)
+
 -- 4. Insert Line Items
 INSERT INTO LINEITEMS VALUES (1001, 101, 1, 50000.00, 10);
-INSERT INTO LINEITEMS VALUES (1002, 101, 2, 52000.00, 5); --
-Price slightly higher
+INSERT INTO LINEITEMS VALUES (1002, 101, 2, 52000.00, 5); -- Price slightly higher
 INSERT INTO LINEITEMS VALUES (1002, 102, 5, 500.00, 0);
- 
+
 COMMIT;
- 
+________________________________________
+Step 3: The Solution Queries
+1. Display the customer name & total no. of items purchased
+Topic: Joins, Aggregate Functions (SUM), Group By
+SQL
 SELECT C.Custname, SUM(L.Qty) AS Total_Items_Purchased
 FROM CUSTOMERS C
 JOIN ORDERS O ON C.Custno = O.Custno
 JOIN LINEITEMS L ON O.Ordno = L.Ordno
 GROUP BY C.Custname;
- 
+2. Display the number of customers in the state, where the customer name contains "Mike"
+Topic: Count, Like, Group By, Having/Where
+SQL
 SELECT State, COUNT(Custno) AS Number_Of_Mikes
 FROM CUSTOMERS
 WHERE Custname LIKE '%Mike%'
 GROUP BY State;
- 
+3. Create a view to display order number, Average of price by taking into the orders placed in the last 15 days
+Topic: Views, Date Math, Aggregate Functions (AVG)
+SQL
 CREATE OR REPLACE VIEW RecentOrderStats AS
 SELECT O.Ordno, AVG(L.Price) AS Average_Price
 FROM ORDERS O
 JOIN LINEITEMS L ON O.Ordno = L.Ordno
 WHERE O.OrdDate >= SYSDATE - 15
 GROUP BY O.Ordno;
- 
+
 -- Run this to verify the view works:
 SELECT * FROM RecentOrderStats;
- 
+4. Write a PLSQL program to display the numbers from 1-5
+Topic: PL/SQL Basic Loop
+SQL
 SET SERVEROUTPUT ON;
- 
+
 BEGIN
-    FOR i IN 1..5 LOOP
-       DBMS_OUTPUT.PUT_LINE(i);
-    END LOOP;
+    FOR i IN 1..5 LOOP
+        DBMS_OUTPUT.PUT_LINE(i);
+    END LOOP;
 END;
 /
 
-answer in this format 
-remember 
